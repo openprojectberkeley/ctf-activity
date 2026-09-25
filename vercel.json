@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/lair-homepage-link", "destination": "/api/lair-homepage-link" },
+    { "source": "/7365637265742d6c616972", "destination": "/end-site/index.html" }
+  ]
+}
