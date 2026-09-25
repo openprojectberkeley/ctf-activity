@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Open Project Spy Page</title>
+  <style>
+    :root {
+      --green: #00ff41;
+      --bg: #000;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      overflow: hidden;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    #rain {
+      position: fixed;
+      inset: 0;
+      display: block;
+      z-index: 0;
+    }
+
+    main {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .panel {
+      max-width: 760px;
+      width: 100%;
+      text-align: center;
+      color: var(--green);
+    }
+
+    .title {
+      position: relative;
+      display: inline-block;
+      color: var(--green);
+      font-size: clamp(1.6rem, 6vw, 3.8rem);
+      font-weight: bold;
+      letter-spacing: 0.06em;
+      line-height: 1.15;
+      text-shadow: 0 0 10px var(--green), 0 0 30px rgba(0, 255, 65, 0.5);
+      background: rgba(0, 0, 0, 0.7);
+      padding: 0.2em 0.5em;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.3em 0.9em;
+      border: 1px solid var(--green);
+      background: rgba(0, 0, 0, 0.8);
+      font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+      font-weight: bold;
+      letter-spacing: 0.25em;
+      color: #ff3355;
+      border-color: #ff3355;
+      text-shadow: 0 0 8px #ff3355;
+      box-shadow: 0 0 12px rgba(255, 51, 85, 0.4);
+    }
+
+    .terminal {
+      margin: 2rem auto 0;
+      max-width: 560px;
+      text-align: left;
+      background: rgba(0, 0, 0, 0.88);
+      border: 1px solid var(--green);
+      box-shadow: 0 0 20px rgba(0, 255, 65, 0.35);
+      padding: 1.25rem 1.5rem;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .terminal h2 {
+      font-size: 1.1rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.75rem;
+      text-shadow: 0 0 8px var(--green);
+    }
+
+    .terminal pre {
+      margin: 0.35rem 0 0.9rem;
+      padding: 0.6rem 0.8rem;
+      background: rgba(0, 255, 65, 0.08);
+      border-left: 3px solid var(--green);
+      overflow-x: auto;
+    }
+
+    .terminal code {
+      font-family: inherit;
+      color: #b8ffc8;
+      user-select: all;
+    }
+
+    .terminal code.locked {
+      color: #5f8f6a;
+      font-style: italic;
+      user-select: none;
+    }
+
+    #key-form label {
+      display: block;
+      margin-bottom: 0.35rem;
+    }
+
+    .key-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    #key-input {
+      flex: 1;
+      min-width: 0;
+      padding: 0.5rem 0.7rem;
+      font: inherit;
+      color: #b8ffc8;
+      background: #000;
+      border: 1px solid var(--green);
+      outline: none;
+      text-transform: uppercase;
+    }
+
+    #key-input:focus {
+      box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+    }
+
+    #key-form button {
+      padding: 0.5rem 1rem;
+      font: inherit;
+      font-weight: bold;
+      color: #000;
+      background: var(--green);
+      border: none;
+      cursor: pointer;
+    }
+
+    #key-form button:hover { background: #b8ffc8; }
+
+    #key-status {
+      min-height: 1.6em;
+      margin-top: 0.35rem;
+    }
+
+    #key-status.error { color: #ff3355; }
+
+    .blink {
+      animation: blink 1s steps(1) infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .blink { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="rain"></canvas>
+
+  <main>
+    <div class="panel">
+      <h1 class="title">OPEN PROJECT SPY PAGE</h1>
+      <p class="badge">// VP TECH ONLY //</p>
+
+      <section class="terminal">
+        <h2>&gt; SECRET OFFSHORE MACHINE</h2>
+        <p>Access from your terminal:</p>
+        <pre><code>ssh agent@159.223.197.17 -p 2222</code></pre>
+        <p>Password:</p>
+        <pre><code id="password" class="locked">[insert key from ssh attempt]</code></pre>
+        <form id="key-form" autocomplete="off">
+          <label for="key-input">&gt; enter key:</label>
+          <div class="key-row">
+            <input id="key-input" type="text" spellcheck="false" placeholder="XXXX-XXXX-XXXX" />
+            <button type="submit">SEND</button>
+          </div>
+          <p id="key-status" aria-live="polite"></p>
+        </form>
+        <p class="blink">_</p>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("rain");
+    const ctx = canvas.getContext("2d");
+
+    const FONT_SIZE = 16;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const FRAME_MS = reducedMotion ? 150 : 50; // ~20fps normally
+
+    let columns = [];
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+      const count = Math.ceil(window.innerWidth / FONT_SIZE);
+      // Keep existing columns, add/remove as needed. Start new ones above the
+      // screen at random heights so they don't all fall in a straight line.
+      columns = Array.from({ length: count }, (_, i) =>
+        columns[i] || { y: -Math.floor(Math.random() * 50), prev: null }
+      );
+    }
+
+    const randomBit = () => (Math.random() < 0.5 ? "0" : "1");
+
+    function draw() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      // Translucent black wash makes older digits fade into trails.
+      ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.font = `${FONT_SIZE}px "Courier New", monospace`;
+      ctx.textBaseline = "top";
+
+      for (let i = 0; i < columns.length; i++) {
+        const col = columns[i];
+        const x = i * FONT_SIZE;
+
+        // Repaint the previous head in normal green so only the leading digit glows.
+        if (col.prev) {
+          const py = col.prev.y * FONT_SIZE;
+          ctx.fillStyle = "#000";
+          ctx.fillRect(x, py, FONT_SIZE, FONT_SIZE);
+          ctx.fillStyle = "#00ff41";
+          ctx.fillText(col.prev.ch, x, py);
+        }
+
+        if (col.y >= 0) {
+          const ch = randomBit();
+          // Occasional glitch: a bright flash instead of the usual head colour.
+          const glitch = Math.random() < 0.002;
+          ctx.fillStyle = glitch ? "#ffffff" : "#b8ffc8";
+          ctx.shadowColor = "#00ff41";
+          ctx.shadowBlur = glitch ? 16 : 8;
+          ctx.fillText(ch, x, col.y * FONT_SIZE);
+          ctx.shadowBlur = 0;
+          col.prev = { y: col.y, ch };
+        } else {
+          col.prev = null;
+        }
+
+        col.y++;
+
+        // Past the bottom: randomly restart at the top so streams stay staggered.
+        if (col.y * FONT_SIZE > h && Math.random() > 0.975) {
+          col.y = 0;
+          col.prev = null;
+        }
+      }
+    }
+
+    let last = 0;
+    function loop(t) {
+      if (t - last >= FRAME_MS) {
+        last = t;
+        draw();
+      }
+      requestAnimationFrame(loop);
+    }
+
+    window.addEventListener("resize", resize);
+    resize();
+    requestAnimationFrame(loop);
+
+    // --- Key-gated password ---
+    const ACCESS_KEY = "CABO-OFFSHORE-SECRET-KEY";
+    const PASSWORD = "vptech-secret-password";
+
+    const form = document.getElementById("key-form");
+    const input = document.getElementById("key-input");
+    const status = document.getElementById("key-status");
+    const passwordEl = document.getElementById("password");
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const attempt = input.value.trim().toUpperCase();
+      if (!attempt) return;
+
+      if (attempt === ACCESS_KEY) {
+        passwordEl.textContent = PASSWORD;
+        passwordEl.classList.remove("locked");
+        status.className = "";
+        status.textContent = "ACCESS GRANTED";
+        form.querySelector(".key-row").remove();
+        form.querySelector("label").remove();
+      } else {
+        status.className = "error";
+        status.textContent = "ACCESS DENIED: invalid key";
+        input.select();
+      }
+    });
+  </script>
+</body>
+</html>
